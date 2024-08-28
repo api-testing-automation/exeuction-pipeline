@@ -1,4 +1,4 @@
-import fetch, { RequestInit, Headers } from 'node-fetch';
+import fs from 'fs';
 
 interface GetRequest {
 	queryString: string;
@@ -18,46 +18,29 @@ interface PostOrPutRequest {
 
 type TestCase = GetRequest | PostOrPutRequest;
 
-async function runTestCase(testCase: TestCase): Promise<void> {
-	try {
-		const headers = new Headers();
-		headers.set('Content-type', testCase.method !== 'GET' && testCase.contentType? testCase.contentType : 'application/json');
-		if (testCase.headers) {
-			for (const key in testCase.headers) {
-				headers.set(key, testCase.headers[key]);
-			}
+function toBrunoString(testCase: TestCase): string {
+	let result = `${testCase.method.toLowerCase()} {\n\turl: ${testCase.queryString}\n}\n\n`;
+
+	if (testCase.headers) {
+		result += `headers {\n`;
+
+		if ((testCase.method === "POST" || testCase.method === "PUT") && testCase.contentType) {
+			result += `\tcontent-type: ${testCase.contentType}\n`;
 		}
 
-		const options: RequestInit = {
-			method: testCase.method,
-			headers: headers
-		};
-
-		if (testCase.method === 'POST' || testCase.method === 'PUT') {
-			options.body = JSON.stringify(testCase.body);
+		for (const key in testCase.headers) {
+			result += `\t${key}: ${testCase.headers[key]}\n`;
 		}
 
-		const response = await fetch(testCase.queryString, options);
-		const actualResponseCode = response.status;
-
-		if (actualResponseCode === testCase.expectedResponseCode) {
-			console.log(`Test passed for ${testCase.method} request: "${testCase.queryString}"`);
-		} else {
-			console.error(
-				`Test failed for ${testCase.method} request: "${testCase.queryString}". ` +
-					`Expected: ${testCase.expectedResponseCode}, ` +
-					`but got: ${actualResponseCode}`
-			);
-		}
-	} catch (error) {
-		console.error(`Test failed for ${testCase.method} request: "${testCase.queryString}". Error: ${error}`);
+		result += '}\n\n';
 	}
-}
 
-async function runAllTestCases(testCases: TestCase[]): Promise<void> {
-	for (const testCase of testCases) {
-		await runTestCase(testCase);
+	if (testCase.method === "POST" || testCase.method === "PUT") {
+		const bodyStringFormattedForBruno = JSON.stringify(testCase.body, null, 2).split('\n').map(line => '\t' + line).join('\n');
+		result += `body {\n${bodyStringFormattedForBruno}\n}\n\n`;
 	}
+
+	return result;
 }
 
 // Example usage:
@@ -85,4 +68,7 @@ const testCases: TestCase[] = [
 	}
 ];
 
-runAllTestCases(testCases);
+for (let i = 0; i < testCases.length; ++i) {
+	fs.writeFileSync(`TestCases/testcase-${i}.bru`, toBrunoString(testCases[i]));
+}
+
