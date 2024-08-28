@@ -43,6 +43,12 @@ function toBrunoString(testCase: TestCase): string {
 	return result;
 }
 
+function writeTestCasesInBruMarkdown(testCases: TestCase[], outputDirectory: string): void {
+	for (let i = 0; i < testCases.length; ++i) {
+		fs.writeFileSync(`${outputDirectory}/testcase-${i}.bru`, toBrunoString(testCases[i]));
+	}
+}
+
 // Example usage:
 const testCases: TestCase[] = [
 	{
@@ -68,7 +74,4 @@ const testCases: TestCase[] = [
 	}
 ];
 
-for (let i = 0; i < testCases.length; ++i) {
-	fs.writeFileSync(`TestCases/testcase-${i}.bru`, toBrunoString(testCases[i]));
-}
-
+writeTestCasesInBruMarkdown(testCases, "TestCases");
